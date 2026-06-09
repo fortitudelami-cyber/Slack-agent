@@ -1,64 +1,31 @@
 # PulseCheck Submission
 
-## Project description
+## Inspiration
 
-PulseCheck is a Slack agent built to help teams detect early signs of communication breakdown, disengagement, and burnout using only public metadata signals. The agent avoids reading message body content or storing private threads by collecting channel-level volume, thread response latency, after-hours activity, cross-channel mentions, and reaction emoji counts. These signals are persisted in Slack Datastore and analyzed over rolling windows so that the most important changes are compared against a four-week baseline.
+Most employee engagement programs rely on surveys, but Gallup estimates $8.9 trillion is lost every year to disengaged teams. Surveys are often lagging indicators because people avoid them, answer in the socially desirable way, or simply do not respond. Meanwhile the real story is already in Slack: the timing of replies, after-hours volume, reaction behavior, and who mentions whom all become behavioral signals that show how teams are actually working together.
 
-When a channel drops below 70% of its baseline volume, when thread latency increases by more than 40%, or when after-hours activity spikes beyond 50%, PulseCheck flags the channel and generates a concise natural-language summary using Slack AI. The agent surfaces those insights through an App Home dashboard, a weekly digest report, and an on-demand `/pulsecheck` command. The Home tab presents an overall health score, a ranked list of top flagged channels, and four-week trend context to make it easy for workspace leaders to take action.
+## What it does
 
-A dedicated mid-week alert trigger notifies the workspace admin if critical anomalies appear. The agent includes an MCP stub ready to map Jira or Linear webhook data to combined communication and delivery health scores, enabling communication and delivery health to be considered together.
+PulseCheck gathers five public Slack signals without reading message content: channel message volume, thread response latency, after-hours message counts, cross-team mention frequency, and reaction emoji totals. It stores those signals in Slack Datastore and compares the latest seven days to a four-week baseline. The health score is explicit: volume drops beyond 20% incur a penalty, latency increases over 25% incur a penalty, after-hours growth over 30% incurs a penalty, and positive cross-team mention growth can add a bonus. The result is a 0-100 score that highlights communication health rather than guessing from surveys.
 
-PulseCheck is especially useful in hybrid and remote teams where delayed thread responses, invisible cross-team mentions, and irregular after-hours messaging can be early signs of overload or burnout. By surfacing those metrics in a dashboard and digest, the agent gives leaders a shared, actionable view of engagement health and helps teams rebalance work before performance and morale suffer.
+Users can interact with PulseCheck three ways. The `/pulsecheck` slash command returns an instant channel snapshot, the App Home tab shows overall health, top flags, and a trend view, and a Monday digest posts the weekly report into `#pulse-check-reports`. An MCP stub is also included so Jira/Linear project health can be blended with Slack communication health for delivery-aware insights.
 
-PulseCheck is designed to work with Slack CLI and Deno, preserve privacy by storing only metadata in Slack Datastore, and reduce disengagement costs by making team stress signals visible early. It also supports a shared reporting lens for team health decisions.
+## How we built it
 
-## Slack technologies used
+We built PulseCheck with the Slack CLI and Deno, using Slack’s Real-Time Search-style metadata collection to capture public event signals. Slack AI turns the raw comparisons into natural language summaries so alerts feel readable and actionable. A lightweight MCP server stub connects Jira/Linear-style data to channel health, and Slack Datastore persists all the behavioral signal state.
 
-- Slack Datastore: stores daily metadata signals such as channel volume, thread latency, after-hours counts, cross-channel mentions, and reaction totals in a secure, bot-managed datastore.
-- Slack AI: generates natural language anomaly summaries and powers an "Ask PulseCheck" query experience, turning raw signal comparisons into human-friendly insights.
-- Block Kit + App Home + Slash Commands + Scheduled Triggers: provides a polished workspace dashboard, a `/pulsecheck` snapshot command, weekly digest delivery, and an interactive modal for follow-up questions.
+## Challenges
 
-## Impact statement
+The hardest part was staying metadata-only while still creating meaningful insights. We needed to avoid content tracking entirely and still surface real engagement risk. We also had to calibrate the health score formula carefully so it would catch issues without generating too many false positives, and we designed the thresholds to be interpretable rather than opaque.
 
-PulseCheck focuses on the burnout and disengagement cost angle by surfacing patterns that often precede team fatigue: falling channel volume, rising thread latency, and increases in after-hours messaging. By identifying these signals early, organizations can act before small communication issues become expensive productivity losses.
+## Accomplishments
 
-## Demo script
+PulseCheck became the first behavioral analytics tool in this project that requires zero user input beyond normal Slack activity. The UI is clean and native because it uses Block Kit, App Home, and modal workflows. We also used all three required Slack technologies in meaningful ways: datastore persistence, AI summaries, and app interactions.
 
-1. Start on the PulseCheck Home tab and show the overall health score, flagged channels, and four-week trend blocks.
-2. Open the "Ask PulseCheck" modal and submit a question about channel health or delivery risk.
-3. Show the `/pulsecheck #channel-name` slash command returning an instant snapshot.
-4. Walk through the weekly digest posted to `#pulse-check-reports`, highlighting the calculated score and top anomaly flags.
-5. Explain how the MCP stub can enrich results with project delivery health and how the agent keeps only metadata in the datastore.
+## What we learned
 
-## ASCII architecture diagram
+We learned the practical limits of Slack’s RTS-style signal collection and how much can be inferred from metadata alone. We also learned how to chain Slack AI summaries into a workflow so raw scores become readable guidance. Finally, we gained experience with MCP server integration patterns for linking delivery tools to Slack health signals.
 
-```
-Slack events --> pulsecheck/functions/collect_signals.ts
-                   |      gathers metadata into Slack Datastore
-                   V
-     pulsecheck/functions/analyze_signals.ts
-                   |      compares 7-day trends vs 4-week baseline
-                   V
-     pulsecheck/functions/generate_digest.ts
-                   |      posts Block Kit digest to #pulse-check-reports
-                   V
-     pulsecheck/triggers/scheduled_analysis.ts
+## What's next
 
-Home tab UI --> pulsecheck/views/home_tab.ts
-Modal UI --> pulsecheck/views/snapshot_modal.ts
-MCP stub --> pulsecheck/functions/mcp_connector.ts
-```
-
-## Manifest scope confirmation
-
-The `pulsecheck/manifest.ts` file includes the correct bot scopes for PulseCheck:
-
-- `channels:history` for channel metadata access
-- `reactions:read` for reaction counting
-- `team:read` for workspace membership and channel details
-- `datastore:read` and `datastore:write` for Slack Datastore persistence
-- `ai:generate` for Slack AI summary generation
-- `conversations:write` and `chat:write` for message delivery and admin alerts
-- `commands` for `/pulsecheck`
-
-This manifest supports Slack AI summary calls, datastore storage, and MCP-style tool integration while avoiding any message body storage.
+Future work will make baselines adaptive with machine learning instead of fixed thresholds, add manager coaching tips alongside alerts, and introduce team comparison benchmarking so leaders can spot relative engagement gaps. We also want to connect native Salesforce/CRM signals so communication health can be tied to customer and pipeline delivery.
