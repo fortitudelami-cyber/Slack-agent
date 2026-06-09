@@ -43,6 +43,43 @@ function computeAggregate(records: DailySignalRecord[]): { volumeAvg: number; la
   return { volumeAvg, latencyAvgMs, afterHoursAvg };
 }
 
+/**
+ * Calculate a 0-100 health score based on anomaly penalties and bonuses:
+ * - Volume drop penalty: -2 per % drop beyond 20%
+ * - Latency penalty: -1.5 per % increase beyond 25%
+ * - After-hours penalty: -3 per % increase beyond 30%
+ * - Cross-team mention bonus: +1 per % increase up to +10
+ * Floor at 0, ceiling at 100
+ */
+function calculateHealthScore(
+  volumeChange: number,
+  latencyChange: number,
+  afterHoursChange: number,
+  mentionChange: number
+): number {
+  let score = 75;
+
+  const volumeDropPct = Math.max(0, -volumeChange);
+  if (volumeDropPct > 20) {
+    score -= (volumeDropPct - 20) * 2;
+  }
+
+  const latencyIncreasePct = Math.max(0, latencyChange);
+  if (latencyIncreasePct > 25) {
+    score -= (latencyIncreasePct - 25) * 1.5;
+  }
+
+  const afterHoursIncreasePct = Math.max(0, afterHoursChange);
+  if (afterHoursIncreasePct > 30) {
+    score -= (afterHoursIncreasePct - 30) * 3;
+  }
+
+  const mentionIncreasePct = Math.min(10, Math.max(0, mentionChange));
+  score += mentionIncreasePct * 1;
+
+  return Math.max(0, Math.min(100, score));
+}
+
 function buildPrompt(channel: string, current: { volumeAvg: number; latencyAvgMs: number; afterHoursAvg: number }, baseline: { volumeAvg: number; latencyAvgMs: number; afterHoursAvg: number }): string {
   return `Analyze the following channel health metrics for ${channel} and return a concise anomaly summary.\n\nCurrent 7-day averages:\n- volume: ${current.volumeAvg.toFixed(1)}\n- latency (ms): ${current.latencyAvgMs.toFixed(1)}\n- after-hours: ${current.afterHoursAvg.toFixed(1)}\n\nBaseline 4-week averages:\n- volume: ${baseline.volumeAvg.toFixed(1)}\n- latency (ms): ${baseline.latencyAvgMs.toFixed(1)}\n- after-hours: ${baseline.afterHoursAvg.toFixed(1)}\n\nFlag the most important anomalies and explain the likely impact on channel health.`;
 }

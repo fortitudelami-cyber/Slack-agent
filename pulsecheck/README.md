@@ -2,7 +2,14 @@
 
 PulseCheck is a Slack agent built for the Slack Agent Builder Challenge. It gathers public Slack metadata, detects workspace communication anomalies, and surfaces health insights through scheduled summaries, slash commands, and Home tab UI.
 
-## Architecture
+## Quick Demo
+
+1. Run the app: `slack run`
+2. Seed demo data: `deno run --allow-env --allow-net scripts/seed_demo_data.ts`
+3. Try the slash command: `/pulsecheck engineering`
+4. Check the Home tab: Click on PulseCheck app to see the dashboard
+5. Trigger the digest: `slack triggers invoke weekly_pulse_check` (or wait until Monday 9am)
+6. Try the Ask modal: Press "Ask PulseCheck" in the Home tab
 
 ```
 Slack event metadata -> pulsecheck/functions/collect_signals.ts
@@ -44,14 +51,16 @@ Manifest entry -> pulsecheck/manifest.ts
 
 ## How it works
 
+- `app.ts` is the Slack app entrypoint that registers all event handlers, triggers, and actions.
 - `collect_signals.ts` stores metadata in Slack Datastore, including per-channel daily volume, thread latency, after-hours counts, cross-channel mentions, and reaction summary counts.
 - `analyze_signals.ts` examines the latest 7 days against a prior 4-week baseline and flags anomalies using Slack AI to generate natural language summaries.
+- `calculate_health_score()` formula: starts at 75, applies -2 per % volume drop (beyond 20%), -1.5 per % latency increase (beyond 25%), -3 per % after-hours spike (beyond 30%), and +1 per % cross-team mentions (up to +10). Floored at 0, capped at 100.
 - `generate_digest.ts` formats a Block Kit report and posts it to `#pulse-check-reports`.
 - `scheduled_analysis.ts` runs weekly at Monday 9am to create the digest.
-- `anomaly_alert.ts` sends a DM alert to the workspace admin when mid-week anomalies are detected.
-- `slash_command.ts` responds to `/pulsecheck [channel]` with an instant health snapshot.
+- `anomaly_alert.ts` runs mid-week (Wednesday 9am) and sends a DM alert to the workspace admin (via `PULSECHECK_ADMIN_USER` env var).
+- `slash_command.ts` responds to `/pulsecheck [channel]` with a rich Block Kit snapshot including a score, severity badges, and trend arrows.
 - `home_tab.ts` builds a Home tab view showing the org health score, top flagged channels, and 4-week trend blocks.
-- `snapshot_modal.ts` opens a modal for free-text AI queries.
+- `snapshot_modal.ts` opens a modal for free-text AI queries; on submit, `app.ts` handles the submission, calls `analyzeSignals`, and updates the modal with results.
 - `mcp_connector.ts` provides a stubbed `get_project_health(project_id)` tool for Jira/Linear integration.
 
 ## Demo flow
