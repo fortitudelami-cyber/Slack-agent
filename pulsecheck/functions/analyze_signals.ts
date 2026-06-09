@@ -76,6 +76,11 @@ async function generateSummary(client: SlackClient, logger: Logger, channel: str
   return lines.length ? lines.join(" ") : "No major anomalies detected in the latest 7-day window.";
 }
 
+/**
+ * Analyzes seven days of collected signals against a four-week baseline.
+ * Flags anomalies in volume drops, latency increases, and after-hours spikes,
+ * and uses Slack AI to generate a human-readable summary for impacted channels.
+ */
 export async function analyzeSignals({ client, logger }: { client: SlackClient; logger: Logger }): Promise<AnalysisResult[]> {
   try {
     const records = await listDailyRecords(client);

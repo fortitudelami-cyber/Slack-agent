@@ -9,11 +9,14 @@ const manifest = {
       "channels:history",
       "channels:read",
       "chat:write",
+      "conversations:write",
       "datastore:read",
       "datastore:write",
       "im:read",
       "im:write",
       "reactions:read",
+      "team:read",
+      "ai:generate",
       "commands"
     ]
   },
@@ -38,6 +41,11 @@ const manifest = {
       name: "weekly_pulse_check",
       schedule: "0 9 * * MON",
       handler: "./triggers/scheduled_analysis.ts"
+    },
+    {
+      name: "midweek_pulse_alert",
+      schedule: "0 9 * * WED",
+      handler: "./triggers/anomaly_alert.ts"
     }
   ],
   functions: {

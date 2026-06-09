@@ -1,3 +1,7 @@
+/**
+ * Builds a modal for free-text PulseCheck AI queries.
+ * Users can ask about channel health, team engagement, or delivery risk.
+ */
 export function buildSnapshotModal({ channelId }: { channelId: string }) {
   return {
     type: "modal",

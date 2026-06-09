@@ -28,6 +28,8 @@ Manifest entry -> pulsecheck/manifest.ts
 - `datastore:write`
 - `im:write`
 - `reactions:read`
+- `team:read`
+- `ai:generate`
 - `commands`
 
 ## Setup
@@ -36,8 +38,9 @@ Manifest entry -> pulsecheck/manifest.ts
 2. Put the `pulsecheck` directory in your Slack app workspace.
 3. Review `pulsecheck/manifest.ts` and verify permissions.
 4. Deploy the app with the Slack CLI.
-5. Ensure the bot is invited to public channels used for reporting and monitoring.
-6. Configure the scheduled trigger for Monday 9am.
+5. Optionally set `PULSECHECK_ADMIN_USER` to a workspace admin user ID to enable mid-week anomaly DMs.
+6. Ensure the bot is invited to public channels used for reporting and monitoring.
+7. Configure the scheduled trigger for Monday 9am.
 
 ## How it works
 

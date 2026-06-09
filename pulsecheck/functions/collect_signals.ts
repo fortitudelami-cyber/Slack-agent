@@ -84,24 +84,18 @@ async function updateDailyRecord(channelId: string, date: string, changes: Parti
   const key = getDailyKey(channelId, date);
   const existing = (await getDatastoreValue(key, client)) as DailySignalRecord | null;
   const now = Date.now();
+
   const updated: DailySignalRecord = {
     channelId,
     date,
-    messageVolume: 0,
-    afterHoursCount: 0,
-    crossChannelMentions: 0,
-    threadLatencySumMs: 0,
-    threadLatencyCount: 0,
-    reactionCounts: {},
-    updatedAt: now,
-    ...(existing ?? {}),
-    ...changes,
+    messageVolume: (existing?.messageVolume ?? 0) + (changes.messageVolume ?? 0),
+    afterHoursCount: (existing?.afterHoursCount ?? 0) + (changes.afterHoursCount ?? 0),
+    crossChannelMentions: (existing?.crossChannelMentions ?? 0) + (changes.crossChannelMentions ?? 0),
+    threadLatencySumMs: (existing?.threadLatencySumMs ?? 0) + (changes.threadLatencySumMs ?? 0),
+    threadLatencyCount: (existing?.threadLatencyCount ?? 0) + (changes.threadLatencyCount ?? 0),
+    reactionCounts: { ...(existing?.reactionCounts ?? {}), ...(changes.reactionCounts ?? {}) },
     updatedAt: now
   };
-
-  if (existing) {
-    updated.reactionCounts = { ...existing.reactionCounts, ...updated.reactionCounts };
-  }
 
   await putDatastoreValue(key, updated, client);
 }
@@ -115,6 +109,11 @@ async function updateWeeklyReactionCounts(channelId: string, weekStart: string, 
   await putDatastoreValue(key, { channelId, weekStart, reactionCounts, updatedAt: Date.now() }, client);
 }
 
+/**
+ * Collects public metadata signals from Slack events and stores them in Datastore.
+ * Only channel metadata is recorded: message volume, thread latency, after-hours counts,
+ * cross-channel mentions, and reaction counts. No message body content is stored.
+ */
 export async function collectSignals({ event, client, logger }: {
   event: SlackEvent;
   client: SlackClient;
@@ -153,7 +152,6 @@ export async function collectSignals({ event, client, logger }: {
 
     const tzOffsetSeconds = Number(event.tz_offset ?? 0);
     const date = normalizeDate(tsValue, tzOffsetSeconds);
-    const weekStart = computeWeekStart(date);
     const timeValue = new Date(tsValue * 1000 + tzOffsetSeconds * 1000);
     const afterHoursIncrement = isAfterHours(timeValue) ? 1 : 0;
     const mentionTargets = extractChannelMentions(event.text as string | undefined).filter((id) => id !== channel);

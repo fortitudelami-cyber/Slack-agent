@@ -31,6 +31,10 @@ function buildDigestBlocks(results: AnalysisResult[]) {
   ];
 }
 
+/**
+ * Builds and posts a weekly Block Kit digest summarizing flagged channel health.
+ * Includes an overall health score, top anomaly flags, and a short summary of issues.
+ */
 export async function generateDigest({ client, logger, analysisResults }: {
   client: SlackClient;
   logger: Logger;
